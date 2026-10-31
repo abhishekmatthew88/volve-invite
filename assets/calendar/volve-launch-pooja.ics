@@ -1,0 +1,29 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//VOLVE//Launch Invitations//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VTIMEZONE
+TZID:Asia/Kolkata
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0530
+TZOFFSETTO:+0530
+TZNAME:IST
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:volve-pooja-2026-11-06@myvolve.com
+DTSTAMP:20261031T064734Z
+DTSTART;TZID=Asia/Kolkata:20261106T110000
+SUMMARY:VOLVE Launch Pooja
+LOCATION:VOLVE\, 126 Aram Nagar Part 2\, JP Road\, Versova\, Andheri West\
+ , Mumbai 400061
+GEO:19.1334987;72.8142631
+DESCRIPTION:The Launch Pooja of VOLVE. We gather to seek blessings for the
+  studio and for everyone who will learn\, move\, create and connect here.
+ \n\nInvitation: https://invite.myvolve.com/pooja/\nDirections: https://ma
+ ps.app.goo.gl/Mk4wmQ7941QApeSA9
+URL:https://invite.myvolve.com/pooja/
+END:VEVENT
+END:VCALENDAR

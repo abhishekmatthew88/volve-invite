@@ -1,0 +1,29 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//VOLVE//Launch Invitations//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VTIMEZONE
+TZID:Asia/Kolkata
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0530
+TZOFFSETTO:+0530
+TZNAME:IST
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:volve-evening-2026-11-06@myvolve.com
+DTSTAMP:20261031T064735Z
+DTSTART;TZID=Asia/Kolkata:20261106T180000
+SUMMARY:VOLVE Evening Launch
+LOCATION:VOLVE\, 126 Aram Nagar Part 2\, JP Road\, Versova\, Andheri West\
+ , Mumbai 400061
+GEO:19.1334987;72.8142631
+DESCRIPTION:The Evening Launch of VOLVE: the first evening of a new home f
+ or arts\, movement\, community and transformation.\n\nInvitation: https:/
+ /invite.myvolve.com/evening/\nDirections: https://maps.app.goo.gl/Mk4wmQ7
+ 941QApeSA9
+URL:https://invite.myvolve.com/evening/
+END:VEVENT
+END:VCALENDAR
