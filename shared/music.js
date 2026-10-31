@@ -314,10 +314,208 @@
     };
   }
 
+
+  /* ---------------- more instruments: tabla, ghungroo, bansuri, Om voices, singing bowl ---------------- */
+  function tablaStroke(ac, dest, t, kind, sa, gain) {
+    // dayan (right drum) is tuned to Sa; bayan (left drum) gives the deep, bending "ge"
+    var g = gain || 0.3;
+    function dayan(dec, bright) {
+      [[1, 1], [2, .5 * bright], [3, .3 * bright], [4.1, .12 * bright]].forEach(function (p) {
+        var o = ac.createOscillator(), e = ac.createGain(); o.frequency.value = sa * 2 * p[0];
+        e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(g * p[1] * .5, t + .004);
+        e.gain.exponentialRampToValueAtTime(0.0001, t + dec / p[0]);
+        o.connect(e); e.connect(dest); o.start(t); o.stop(t + dec + .05);
+      });
+      var n = ac.createBufferSource(), bp = ac.createBiquadFilter(), ne = ac.createGain();
+      n.buffer = noiseBuf(ac); bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 1.2;
+      ne.gain.setValueAtTime(g * .25, t); ne.gain.exponentialRampToValueAtTime(0.0001, t + .03);
+      n.connect(bp); bp.connect(ne); ne.connect(dest); n.start(t); n.stop(t + .05);
+    }
+    function bayan(open) {
+      var o = ac.createOscillator(), e = ac.createGain(); o.type = "sine";
+      o.frequency.setValueAtTime(78, t); o.frequency.linearRampToValueAtTime(open ? 104 : 70, t + (open ? .32 : .1));
+      e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(g * .9, t + .01);
+      e.gain.exponentialRampToValueAtTime(0.0001, t + (open ? .75 : .14));
+      o.connect(e); e.connect(dest); o.start(t); o.stop(t + .8);
+    }
+    if (kind === "dha") { dayan(.55, 1); bayan(true); }
+    else if (kind === "dhin") { dayan(.9, .6); bayan(true); }
+    else if (kind === "tin") dayan(.9, .6);
+    else if (kind === "na" || kind === "ta") dayan(.45, 1);
+    else if (kind === "ge") bayan(true);
+    else if (kind === "ka") bayan(false);
+  }
+  // Teentaal, 16 beats. The khali (empty) section drops the bass drum.
+  var TEENTAAL = ["dha", "dhin", "dhin", "dha", "dha", "dhin", "dhin", "dha", "dha", "tin", "tin", "ta", "ta", "dhin", "dhin", "dha"];
+  function ghungroo(ac, dest, t, gain, len) {
+    // a cluster of tiny bells: bright filtered noise with a few quick, uneven strikes (cheap enough for phones)
+    var n = ac.createBufferSource(); n.buffer = noiseBuf(ac);
+    var bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 6200; bp.Q.value = 2.2;
+    var e = ac.createGain(); e.gain.setValueAtTime(0.0001, t);
+    var tt = t, L = len || 0.08;
+    for (var i = 0; i < 6; i++) {
+      tt = t + (i / 6) * L + rnd() * 0.012;
+      e.gain.setValueAtTime(0.0001, tt); e.gain.exponentialRampToValueAtTime(gain * (0.5 + rnd() * 0.5) * 3, tt + 0.003); e.gain.exponentialRampToValueAtTime(0.0001, tt + 0.07);
+    }
+    n.connect(bp); bp.connect(e); e.connect(dest); n.start(t, rnd()); n.stop(tt + 0.3);
+  }
+  function bansuriPhrase(ac, dest, t, notes, gain) {
+    // breathy bamboo flute: sine core, soft triangle body, tuned breath, delayed vibrato, legato glides
+    var total = notes.reduce(function (a, n) { return a + n.dur; }, 0);
+    var o1 = ac.createOscillator(), o2 = ac.createOscillator(), g2 = ac.createGain(); o1.type = "sine"; o2.type = "triangle"; g2.gain.value = .22;
+    var sum = ac.createGain(); o1.connect(sum); o2.connect(g2); g2.connect(sum);
+    var nz = ac.createBufferSource(); nz.buffer = noiseBuf(ac); nz.loop = true;
+    var bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 6;
+    var ng = ac.createGain(); ng.gain.value = .3; nz.connect(bp); bp.connect(ng); ng.connect(sum);
+    var air = ac.createBiquadFilter(); air.type = "highpass"; air.frequency.value = 1800;
+    var ag = ac.createGain(); ag.gain.value = .015; nz.connect(air); air.connect(ag); ag.connect(sum);
+    var env = ac.createGain(); sum.connect(env); env.connect(dest);
+    env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(gain, t + .18);
+    env.gain.setValueAtTime(gain, t + total - .4); env.gain.exponentialRampToValueAtTime(0.0001, t + total + .35);
+    var lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 4.8;
+    lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(11, t + 1.1); lfo.connect(lg); lg.connect(o1.detune); lg.connect(o2.detune);
+    var tt = t;
+    notes.forEach(function (n, i) {
+      [o1.frequency, o2.frequency, bp.frequency].forEach(function (fp) {
+        if (i === 0) { fp.setValueAtTime(n.f, tt); return; }
+        if (n.glide) { fp.setValueAtTime(notes[i - 1].f, tt); fp.linearRampToValueAtTime(n.f, tt + n.glide); }
+        else fp.setTargetAtTime(n.f, tt, .015);
+      });
+      if (i > 0 && !n.glide) { env.gain.setValueAtTime(gain, tt - .025); env.gain.linearRampToValueAtTime(gain * .6, tt); env.gain.linearRampToValueAtTime(gain, tt + .07); }
+      tt += n.dur;
+    });
+    [o1, o2, nz, lfo].forEach(function (x) { x.start(t); x.stop(t + total + .5); });
+    return total;
+  }
+  // A sung "Om": a soft vowel moving from O to U and closing to M, by a small choir.
+  function omChant(ac, dest, t, freqs, dur, gain) {
+    var V = [[570, 840, 2410], [450, 800, 2830], [300, 870, 2240], [260, 600, 1800]];
+    freqs.forEach(function (f, vi) {
+      var o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = (vi - 1) * 6;
+      var lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 4.6 + vi * .3; lg.gain.value = 9; lfo.connect(lg); lg.connect(o.detune);
+      var sum = ac.createGain(), env = ac.createGain();
+      [0, 1, 2].forEach(function (k) {
+        var b = ac.createBiquadFilter(); b.type = "bandpass"; b.Q.value = 7 - k; var g = ac.createGain(); g.gain.value = [1.4, .7, .25][k];
+        b.frequency.setValueAtTime(V[0][k], t);
+        b.frequency.linearRampToValueAtTime(V[1][k], t + dur * .3);
+        b.frequency.linearRampToValueAtTime(V[2][k], t + dur * .55);
+        b.frequency.linearRampToValueAtTime(V[3][k], t + dur * .7);
+        o.connect(b); b.connect(g); g.connect(sum);
+      });
+      var lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = .5;
+      lp.frequency.setValueAtTime(3200, t); lp.frequency.linearRampToValueAtTime(2600, t + dur * .6); lp.frequency.linearRampToValueAtTime(420, t + dur * .75);
+      sum.connect(lp); lp.connect(env); env.connect(dest);
+      env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(gain / freqs.length, t + .9);
+      env.gain.setValueAtTime(gain / freqs.length, t + dur * .72); env.gain.linearRampToValueAtTime(gain / freqs.length * .7, t + dur * .85);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); lfo.start(t); o.stop(t + dur + .1); lfo.stop(t + dur + .1);
+    });
+  }
+  function singingBowl(ac, dest, t, f, gain, dur) {
+    [[1, 1], [2.71, .45], [5.15, .22], [8.4, .1]].forEach(function (p) {
+      [0, 1].forEach(function (k) { // two close tones per partial give the bowl its slow beating
+        var o = ac.createOscillator(), e = ac.createGain(); o.frequency.value = f * p[0] * (k ? 1.0035 : 1);
+        e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(gain * p[1] * .5, t + .02);
+        e.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 12) / Math.sqrt(p[0]));
+        o.connect(e); e.connect(dest); o.start(t); o.stop(t + (dur || 12) + .2);
+      });
+    });
+  }
+  function bansuriTrack(scale, sa) {
+    var walk = ragaWalk(scale, -5, 14), n = 0;
+    return function (ac, voice, t) {
+      var semis = walk.phrase(3 + Math.floor(rnd() * 4), n === 0 ? 0 : undefined);
+      var notes = semis.map(function (x, k) {
+        var last = k === semis.length - 1, prev = k ? semis[k - 1] : null;
+        return { f: hz(sa * 4, x), dur: last ? pick([2.4, 2.8, 3.2]) : pick([.6, .8, 1, 1.3, 1.7]), glide: prev !== null && Math.abs(x - prev) <= 2 && rnd() < .55 ? .14 + rnd() * .2 : 0 };
+      });
+      n++;
+      return bansuriPhrase(ac, voice, t, notes, .34) + 1.8 + rnd() * 2.2;
+    };
+  }
+
   /* ---------------- tracks ---------------- */
   var C_SHARP3 = 138.59, D3 = 146.83;
   var TRACKS = {
     // ---- Pooja ----
+    "pooja-pillars": {
+      gain: 0.58, event: "pooja", name: "The four pillars", sub: "A two-minute journey through VOLVE's philosophy in Raag Ahir Bhairav. Arts: the sitar alone. Movement: the tabla enters. Community: the shehnai and ghungroo join. Transformation: everything settles into a sung Om and a singing bowl.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.45, 3.6);
+        var reed = ac.createGain(); reed.gain.value = 0.5; reed.connect(b.input);
+        var perc = ac.createGain(); perc.gain.value = 0.55; perc.connect(b.input);
+        var scale = [0, 1, 4, 5, 7, 9, 10];
+        return { b: b, reed: reed, perc: perc, sitar: sitarVoice(ac, b.input, C_SHARP3), tan: tanpuraVoice(ac, b.input),
+          mel: alaap(scale, C_SHARP3, 1.0), call: mangalTrack(scale, C_SHARP3), tNext: 0, mNext: 2.2, pNext: 0, beat: 0, cNext: 0, start: 0 };
+      },
+      tick: function (ac, s, t0, t1) {
+        var CYCLE = 124, sec = function (t) { var x = (t - s.start) % CYCLE; return x < 32 ? 0 : x < 64 ? 1 : x < 100 ? 2 : 3; };
+        if (s.start === undefined) s.start = t0;
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.15);
+        // Arts and Movement: the sitar sings; in Community the shehnai leads instead
+        while (s.mNext < t1) { var tm = Math.max(s.mNext, t0), sc = sec(tm);
+          if (sc === 2) { if (s.cNext <= tm) { s.cNext = tm + s.call(ac, s, tm); } s.mNext = Math.max(s.cNext, tm + 1); }
+          else if (sc === 3) s.mNext = tm + 1;
+          else s.mNext = tm + s.mel(ac, s.sitar, tm); }
+        // Movement and Community: slow teentaal, ghungroo on the sam
+        var BEAT = 60 / 66;
+        while (s.pNext < t1) { var tp = Math.max(s.pNext, t0), sp = sec(tp);
+          if (sp === 1 || sp === 2) { var b = s.beat % 16; tablaStroke(ac, s.perc, tp, TEENTAAL[b], C_SHARP3, b === 0 ? 0.34 : 0.24);
+            if (sp === 2 && (b === 0 || b === 12)) ghungroo(ac, s.perc, tp, 0.05, 0.12); s.beat++; }
+          else s.beat = 0;
+          s.pNext = tp + BEAT; }
+        // Transformation: a sung Om and a singing bowl, then a breath before the cycle returns
+        if (!s.oInit) { s.oNext = s.start + 100; s.oInit = true; }
+        while (s.oNext < t1) { var to = s.oNext;
+          if (to >= t0 - 1) { singingBowl(ac, s.b.input, to, C_SHARP3 * 2, 0.12, 14); omChant(ac, s.b.input, to + 1.5, [C_SHARP3 / 2, C_SHARP3, C_SHARP3 * 1.5], 9, 0.5);
+            omChant(ac, s.b.input, to + 12, [C_SHARP3 / 2, C_SHARP3, C_SHARP3 * 2], 9, 0.45); }
+          s.oNext += CYCLE; }
+      },
+    },
+    "pooja-kathak": {
+      gain: 0.54, event: "pooja", name: "Kathak blessing", sub: "For VOLVE as a home of dance: sitar in Raag Bilawal over a slow teentaal on tabla, with ghungroo bells marking each cycle. Rhythmic, joyful and still devotional.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.4, 3.0);
+        var perc = ac.createGain(); perc.gain.value = 0.6; perc.connect(b.input);
+        return { b: b, perc: perc, sitar: sitarVoice(ac, b.input, C_SHARP3), tan: tanpuraVoice(ac, b.input), mel: alaap([0, 2, 4, 5, 7, 9, 11], C_SHARP3, 0.85), tNext: 0, mNext: 1.5, pNext: 0.5, beat: 0 };
+      },
+      tick: function (ac, s, t0, t1) {
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.14);
+        while (s.mNext < t1) s.mNext += s.mel(ac, s.sitar, Math.max(s.mNext, t0));
+        var BEAT = 60 / 72;
+        while (s.pNext < t1) { var t = Math.max(s.pNext, t0), b = s.beat % 16;
+          tablaStroke(ac, s.perc, t, TEENTAAL[b], C_SHARP3, b === 0 ? 0.36 : 0.24);
+          if (b === 0) ghungroo(ac, s.perc, t, 0.06, 0.14); else if (b % 4 === 0) ghungroo(ac, s.perc, t, 0.025, 0.06);
+          s.beat++; s.pNext = t + BEAT; }
+      },
+    },
+    "pooja-sanctum": {
+      gain: 0.78, event: "pooja", name: "Sanctum Om", sub: "From VOLVE Sanctum's world of sound healing: a soft choir chanting Om over a tanpura, with singing bowls tuned to Sa and Pa. The stillest and most meditative choice.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.6, 5.0);
+        return { b: b, tan: tanpuraVoice(ac, b.input), tNext: 0, oNext: 1.5, bNext: 0.2, k: 0 };
+      },
+      tick: function (ac, s, t0, t1) {
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.07);
+        while (s.oNext < t1) { var t = Math.max(s.oNext, t0);
+          omChant(ac, s.b.input, t, s.k % 3 === 2 ? [C_SHARP3 / 2, C_SHARP3 * .75, C_SHARP3] : [C_SHARP3 / 2, C_SHARP3, C_SHARP3 * 1.5], 9, 1.1);
+          s.k++; s.oNext = t + 13 + rnd() * 3; }
+        while (s.bNext < t1) { var tb = Math.max(s.bNext, t0); singingBowl(ac, s.b.input, tb, pick([C_SHARP3 * 2, C_SHARP3 * 3, C_SHARP3 * 4]), 0.1, 16); s.bNext = tb + 9 + rnd() * 6; }
+      },
+    },
+    "pooja-bansuri": {
+      gain: 0.4, event: "pooja", name: "Bansuri sunrise", sub: "Bamboo flute in Raag Deshkar, a bright five-note morning raga, over a tanpura and distant temple bells. Fresh, light and open: morning sunlight in sound.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.55, 4.0);
+        var fl = ac.createGain(); fl.gain.value = 0.6; fl.connect(b.input);
+        return { b: b, fl: fl, tan: tanpuraVoice(ac, b.input), mel: bansuriTrack([0, 2, 4, 7, 9], C_SHARP3), tNext: 0, mNext: 2.5, bNext: 6 };
+      },
+      tick: function (ac, s, t0, t1) {
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.15);
+        while (s.mNext < t1) s.mNext += s.mel(ac, s.fl, Math.max(s.mNext, t0));
+        while (s.bNext < t1) { bell(ac, s.b.input, Math.max(s.bNext, t0), pick([C_SHARP3 * 4, C_SHARP3 * 6]), 0.035, 6); s.bNext += 18 + rnd() * 10; }
+      },
+    },
     "pooja-shehnai-bhairav": {
       gain: 0.45, event: "pooja", name: "Mangal shehnai · Bhairav", sub: "Shehnai and sitar in call and response over a tanpura, in Raag Bhairav, the devotional raga of dawn. The most traditional and spiritual choice.",
       setup: function (ac, dest) {
@@ -475,6 +673,7 @@
     var tr = TRACKS[id], st = tr.setup(ac, dest), t0 = ac.currentTime + 0.1;
     // shift the track's own clock to now
     Object.keys(st).forEach(function (k) { if (typeof st[k] === "number" && /next|Next|tw/.test(k)) st[k] += t0; });
+    if ("start" in st) st.start = t0;
     st.b.out.gain.setValueAtTime(0.0001, ac.currentTime);
     st.b.out.gain.exponentialRampToValueAtTime((level || 0.8) * (tr.gain || 1), ac.currentTime + 3);
     var me = { id: id, ac: ac, st: st, timer: 0 };
