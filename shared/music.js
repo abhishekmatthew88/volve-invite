@@ -335,7 +335,8 @@
     if (!TRACKS[id] || !ac) return;
     if (live && live.id === id) return;
     M.stop(0.8);
-    if (navigator.audioSession) { try { navigator.audioSession.type = "playback"; } catch (e) {} }
+    // "ambient" respects the iPhone silent switch, so a phone on silent stays silent.
+    if (navigator.audioSession) { try { navigator.audioSession.type = "ambient"; } catch (e) {} }
     var tr = TRACKS[id], st = tr.setup(ac, dest), t0 = ac.currentTime + 0.1;
     // shift the track's own clock to now
     Object.keys(st).forEach(function (k) { if (typeof st[k] === "number" && /next|Next|tw/.test(k)) st[k] += t0; });

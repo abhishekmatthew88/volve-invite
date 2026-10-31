@@ -456,22 +456,55 @@
       setTimeout(function () { d.oscs.forEach(function (o) { try { o.stop(); } catch (e) {} }); }, 1400);
     },
   };
+  // Sound starts on by default. Browsers only allow audio after the guest's first tap, so the music
+  // begins on that first tap anywhere on the page (usually the diya or the point of light).
+  // Tapping the speaker turns it off, and that choice is remembered on this phone.
+  var SOUND_OFF_KEY = "volve.invite.soundOff";
   V.initSoundToggle = function (onEnable) {
-    V.$$("[data-action=sound]").forEach(function (b) {
-      if (!V.sound.available()) { b.hidden = true; return; }
-      function sync() {
-        var on = V.sound.on();
+    var buttons = V.$$("[data-action=sound]");
+    if (!V.sound.available()) { buttons.forEach(function (b) { b.hidden = true; }); return; }
+    var startOn = C.soundStartsOn !== false && !store.get(SOUND_OFF_KEY);
+    var started = false;
+    function sync() {
+      var on = V.sound.on() || (armed && !started);
+      buttons.forEach(function (b) {
         b.setAttribute("aria-pressed", on ? "true" : "false");
         b.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
         var l = V.$(".label", b); if (l) l.textContent = on ? "Sound on" : "Sound off";
-      }
-      sync();
-      b.addEventListener("click", function () {
-        var on = V.sound.set(!V.sound.on());
-        if (!on) { V.sound.stopDrone(); V.sound.music(false); } else if (onEnable) onEnable();
       });
-      document.addEventListener("volve:sound", sync);
+    }
+    var armed = startOn;
+    var GESTURES = ["touchend", "pointerup", "click", "keydown"];
+    function disarm() { armed = false; GESTURES.forEach(function (g) { document.removeEventListener(g, unlock, true); }); }
+    function unlock(e) {
+      if (!armed) return disarm();
+      if (e && e.target && e.target.closest && e.target.closest("[data-action=sound]")) return; // the speaker button decides for itself
+      if (e && e.type === "keydown" && (e.key === "Tab" || e.key === "Shift")) return;
+      disarm();
+      if (!V.sound.set(true)) return sync();
+      started = true;
+      if (onEnable) onEnable(true);
+      V.toast("Music on · tap the speaker to turn it off");
+    }
+    if (armed) GESTURES.forEach(function (g) { document.addEventListener(g, unlock, true); });
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var turnOn = !(V.sound.on() || (armed && !started));
+        disarm();
+        var on = V.sound.set(turnOn);
+        started = on;
+        if (!on) { V.sound.stopDrone(); V.sound.music(false); store.set(SOUND_OFF_KEY, true); }
+        else { store.del(SOUND_OFF_KEY); if (onEnable) onEnable(false); }
+        sync();
+      });
     });
+    document.addEventListener("volve:sound", sync);
+    // Pause when the guest leaves the page (switches app or tab); resume when they come back.
+    document.addEventListener("visibilitychange", function () {
+      var a = ac; if (!a || !V.sound.on()) return;
+      if (document.hidden) a.suspend && a.suspend(); else a.resume && a.resume();
+    });
+    sync();
   };
 
   /* ---------- motion toggle (in addition to the system setting) ---------- */

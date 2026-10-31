@@ -18,8 +18,8 @@
   V.wireActions(EV, "You’re invited to the Launch Pooja of VOLVE, " + V.dateLong(C.events[EV].date) + " at " + V.time12(C.events[EV].start) + ".");
   V.initMotionToggle();
   var TRACK = (C.sound && C.sound.pooja) || "pooja-bilawal";
-  V.initSoundToggle(function () {
-    V.sound.bell(277.18, .1);
+  V.initSoundToggle(function (auto) {
+    if (!auto) V.sound.bell(277.18, .1); // the diya's own bell rings on a first tap there
     V.sound.music(true, TRACK);
   });
   V.showInAppHint();

@@ -42,7 +42,7 @@
   V.wireActions(EV, "You’re invited to the Evening Launch of VOLVE, " + V.dateLong(C.events[EV].date) + " at " + V.time12(C.events[EV].start) + ".");
   V.initMotionToggle();
   var TRACK = (C.sound && C.sound.evening) || "evening-pulse";
-  V.initSoundToggle(function () { V.sound.chime(587.33, .08); V.sound.music(true, TRACK); });
+  V.initSoundToggle(function (auto) { if (!auto) V.sound.chime(587.33, .08); V.sound.music(true, TRACK); });
   V.showInAppHint();
 
   /* ---------- top bar ---------- */
