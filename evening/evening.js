@@ -67,8 +67,11 @@
     cue.textContent = "Welcome to VOLVE";
     [587.33, 739.99, 880].forEach(function (f, i) { setTimeout(function () { V.sound.chime(f, .08); }, i * 220); });
   }
+  spark.insertAdjacentHTML("beforeend", '<span class="ripple" aria-hidden="true"></span>');
   spark.addEventListener("click", wake);
-  if (V.reducedMotion()) { lockup.classList.add("awake"); cue.textContent = ""; }
+  $("#spark-cta").addEventListener("click", wake);
+  lockup.addEventListener("click", wake); // the dimmed logo itself is also a target
+  if (V.reducedMotion()) { lockup.classList.add("awake"); intro.classList.add("woke"); cue.textContent = ""; }
 
   /* ---------- scrolling ---------- */
   function go(id, focus) {
@@ -371,7 +374,7 @@
 
   /* ---------- replay ---------- */
   $("#replay").addEventListener("click", function () {
-    lockup.classList.remove("awake"); intro.classList.remove("woke"); cue.textContent = "Touch the light";
+    lockup.classList.remove("awake"); intro.classList.remove("woke"); cue.textContent = "";
     V.sound.stopDrone();
     seen = {}; artPillar = null; cancelAnimationFrame(raf); actx.clearRect(0, 0, art.width, art.height);
     $$(".star").forEach(function (s) { s.setAttribute("aria-pressed", "false"); s.classList.remove("seen"); });
