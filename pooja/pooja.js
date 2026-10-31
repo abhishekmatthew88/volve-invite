@@ -3,6 +3,7 @@
   "use strict";
   var V = window.Volve, C = window.VOLVE_CONFIG, $ = V.$, $$ = V.$$;
   var EV = "pooja";
+  document.documentElement.classList.add("js-on");
   var html = document.documentElement, body = document.body;
 
   var BLESSINGS = {
@@ -93,6 +94,7 @@
     }, V.reducedMotion() ? 0 : 900);
   }
   diya.addEventListener("click", light);
+  $("#diya-cta").addEventListener("click", function () { light(); diya.focus({ preventScroll: true }); });
 
   step.addEventListener("submit", function (e) {
     e.preventDefault();
@@ -218,7 +220,7 @@
     body.classList.remove("lit"); var ml = $(".morning-light"); ml && ml.classList.remove("settled");
     diya.setAttribute("aria-pressed", "false");
     $("#diya-label").textContent = "Light the diya";
-    cue.textContent = "Tap the diya to light the welcome";
+    cue.textContent = "";
     step.hidden = true; $(".view-link").hidden = false;
     V.sound.stopDrone();
     chosen = null;

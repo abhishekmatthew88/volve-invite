@@ -92,7 +92,11 @@
           <path d="M44 104 C60 116 84 120 100 120" fill="none" stroke="#FFF1C9" stroke-width="3" stroke-linecap="round" opacity=".28"/>
         </svg>
       </button>
-      <p class="diya-cue" id="diya-cue" aria-live="polite">Tap the diya to light the welcome</p>
+      <div class="diya-guide" id="diya-guide">
+        <span class="guide-pointer" aria-hidden="true"></span>
+        <button type="button" class="diya-cta" id="diya-cta"><span class="cta-flame" aria-hidden="true"></span><span>Tap the diya to light it</span></button>
+      </div>
+      <p class="diya-cue" id="diya-cue" aria-live="polite"></p>
 
       <!-- Optional first-name greeting, offered once the lamp is lit -->
       <form class="name-step" id="name-step" hidden>

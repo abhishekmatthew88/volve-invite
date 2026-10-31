@@ -243,3 +243,29 @@ body.pooja {
 .anim .opening .rule, .anim .gratitude { animation: rise 1s ease-out 1.5s both; }
 .anim .diya-stage { animation: rise 1s ease-out 1.8s both; }
 @keyframes glowIn { from { opacity: 0; transform: scale(.92); text-shadow: 0 0 0 rgba(242, 160, 70, 0); } to { opacity: 1; transform: none; } }
+
+/* Guide to the diya: a glowing bronze button with a pointer up to the lamp, and a waiting ember at the wick */
+.diya-guide { display: grid; justify-items: center; gap: 6px; margin-top: 2px; }
+.guide-pointer { width: 2px; height: 26px; position: relative; background: linear-gradient(rgba(138, 77, 16, 0), var(--bronze)); animation: point 1.6s ease-in-out infinite; }
+.guide-pointer::before { content: ""; position: absolute; left: 50%; top: -2px; width: 10px; height: 10px; margin-left: -5px; border-left: 2px solid var(--bronze); border-top: 2px solid var(--bronze); transform: rotate(45deg); }
+@keyframes point { 0%, 100% { transform: translateY(4px); opacity: .6; } 50% { transform: translateY(-4px); opacity: 1; } }
+.diya-cta {
+  display: inline-flex; align-items: center; gap: 12px; min-height: 54px; padding: 12px 26px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bronze); background: var(--bronze); color: var(--on-accent);
+  font-family: var(--f-caps); font-size: 13px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+  animation: diyaPulse 1.8s ease-out infinite; -webkit-tap-highlight-color: transparent;
+}
+.diya-cta:focus-visible { outline: 2px solid var(--bronze); outline-offset: 3px; }
+.cta-flame { width: 10px; height: 14px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: radial-gradient(circle at 50% 70%, #FFF6D8, #FFC861 50%, #F08A24 90%); box-shadow: 0 0 10px 3px rgba(255, 200, 97, .8); flex: none; }
+@keyframes diyaPulse { 0% { box-shadow: 0 0 0 0 rgba(222, 127, 39, .5), 0 10px 26px -10px rgba(138, 77, 16, .7); } 70% { box-shadow: 0 0 0 16px rgba(222, 127, 39, 0), 0 10px 26px -10px rgba(138, 77, 16, .7); } 100% { box-shadow: 0 0 0 0 rgba(222, 127, 39, 0), 0 10px 26px -10px rgba(138, 77, 16, .7); } }
+.lit .diya-guide { display: none; }
+html:not(.js-on) .diya-guide { display: none; }
+.diya-cue:empty { display: none; }
+/* a soft ring of light around the unlit lamp, and an ember waiting at the wick */
+.diya::before { content: ""; position: absolute; left: 50%; top: 52%; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%;
+  border: 2.5px solid rgba(222, 127, 39, .8); box-shadow: 0 0 18px rgba(255, 190, 110, .45); animation: diyaRing 2s ease-out infinite; pointer-events: none; }
+.diya::after { content: ""; position: absolute; left: 50%; top: 44.6%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: #FFB347; box-shadow: 0 0 10px 4px rgba(255, 179, 71, .75); animation: ember 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes diyaRing { 0% { transform: scale(.55); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+@keyframes ember { 0%, 100% { opacity: .55; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.15); } }
+.lit .diya::before, .lit .diya::after { display: none; }

@@ -194,6 +194,7 @@
     var all = ORDER.every(function (o) { return seen[o]; });
     $("#sky").classList.toggle("complete", all);
     var next = ORDER[(ORDER.indexOf(k) + 1) % 4];
+    guide();
     var pt = $("#panel-text");
     pt.style.setProperty("--c", p.color);
     pt.innerHTML = "<h3>" + p.name + "</h3>" +
@@ -214,6 +215,17 @@
     }
   }
   $$(".star").forEach(function (s) { s.addEventListener("click", function () { showPillar(s.getAttribute("data-p"), true); }); });
+  // Guide: one clear button and one rippling star always show where to tap next.
+  function nextUnseen() { for (var i = 0; i < 4; i++) if (!seen[ORDER[i]]) return ORDER[i]; return null; }
+  function guide() {
+    var n = nextUnseen(), count = ORDER.filter(function (o) { return seen[o]; }).length;
+    $$(".star").forEach(function (st) { st.classList.toggle("next-up", st.getAttribute("data-p") === n); });
+    $("#guide-count").textContent = count + " of 4 explored";
+    $("#star-cta-text").textContent = count === 0 ? "Tap a star · start with Arts" : n ? "Next star: " + P[n].name : "";
+    $("#star-guide").classList.toggle("done", !n);
+  }
+  $("#star-cta").addEventListener("click", function () { var n = nextUnseen(); if (n) { showPillar(n); var st = $('.star[data-p="' + n + '"]'); st && st.focus({ preventScroll: true }); } });
+  guide();
   $$("[data-start]").forEach(function (b) { b.addEventListener("click", function () { showPillar(b.getAttribute("data-start")); }); });
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && artPillar) { cancelAnimationFrame(raf); raf = requestAnimationFrame(drawArt); } });
 
@@ -378,7 +390,7 @@
     V.sound.stopDrone();
     seen = {}; artPillar = null; cancelAnimationFrame(raf); actx.clearRect(0, 0, art.width, art.height);
     $$(".star").forEach(function (s) { s.setAttribute("aria-pressed", "false"); s.classList.remove("seen"); });
-    $$(".edge").forEach(function (e) { e.classList.remove("on"); }); $("#sky").classList.remove("complete");
+    $$(".edge").forEach(function (e) { e.classList.remove("on"); }); $("#sky").classList.remove("complete"); guide();
     $("#panel-text").innerHTML = '<p class="panel-hint">Choose a star above, or start with <button type="button" class="inline-btn" data-start="arts">Arts</button>.</p>';
     $("[data-start]").addEventListener("click", function () { showPillar("arts"); });
     revealed = false;

@@ -140,15 +140,29 @@ html:not(.js) .cta-wrap { display: none; }
   display: grid; justify-items: center; gap: 6px; min-width: 64px; padding: 4px 6px 6px; border: 0; background: none; cursor: pointer;
   -webkit-tap-highlight-color: transparent; border-radius: 12px;
 }
-.star .dot { position: relative; width: 40px; height: 40px; border-radius: 50%; display: block; }
-.star .dot::before { content: ""; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px 3px color-mix(in srgb, var(--c) 55%, transparent); transition: transform .4s ease, box-shadow .4s ease; }
-.star .dot::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; border: 1px solid var(--c); opacity: .35; animation: twinkle 3.4s ease-in-out infinite; }
+.star .dot { position: relative; width: 52px; height: 52px; border-radius: 50%; display: block; }
+.star .dot::before { content: ""; position: absolute; left: 50%; top: 50%; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px 3px color-mix(in srgb, var(--c) 55%, transparent); transition: transform .4s ease, box-shadow .4s ease; }
+.star .dot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1.5px solid var(--c); opacity: .55; animation: twinkle 2.4s ease-in-out infinite; }
 .star:nth-of-type(2) .dot::after { animation-delay: -.8s; } .star:nth-of-type(3) .dot::after { animation-delay: -1.6s; } .star:nth-of-type(4) .dot::after { animation-delay: -2.4s; }
 @keyframes twinkle { 0%, 100% { transform: scale(.85); opacity: .25; } 50% { transform: scale(1.1); opacity: .6; } }
 .star .name { font-family: var(--f-caps); text-transform: uppercase; letter-spacing: .14em; font-size: 10.5px; color: var(--muted-gold); background: var(--noir); padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
 .star[aria-pressed="true"] .dot::before { transform: scale(1.7); box-shadow: 0 0 22px 8px color-mix(in srgb, var(--c) 60%, transparent); }
 .star[aria-pressed="true"] .name { color: var(--champagne); }
 .star.seen .dot::after { opacity: .7; animation: none; }
+/* the star we suggest next ripples like the opening light */
+.star.next-up .dot::after { border-width: 2px; opacity: 1; animation: halo 1.8s ease-out infinite; }
+.star.next-up .dot::before { transform: scale(1.35); animation: breathe 1.8s ease-in-out infinite; }
+.star.next-up .name { color: var(--noir); background: var(--amber); }
+.star-guide { display: grid; justify-items: center; gap: 6px; margin: 4px auto 6px; }
+.star-cta {
+  display: inline-flex; align-items: center; gap: 12px; min-height: 50px; padding: 10px 22px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--amber); background: var(--amber); color: var(--on-accent);
+  font-family: var(--f-caps); font-size: 12.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+  animation: ctaPulse 1.8s ease-out infinite; -webkit-tap-highlight-color: transparent;
+}
+.star-cta:focus-visible { outline: 2px solid var(--champagne); outline-offset: 3px; }
+.guide-count { font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted-gold); }
+.star-guide.done { display: none; }
 .star:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
 .panel { margin: 18px auto 0; max-width: 440px; border-radius: 16px; padding: 18px 18px 22px; border: 1px solid rgba(192, 120, 48, .2);
@@ -227,5 +241,5 @@ html:not(.js) .cta-wrap { display: none; }
 .link-btn { color: var(--muted-gold); }
 .foot-logo { width: 130px; height: auto; }
 
-@media (max-width: 360px) { .star .name { font-size: 9.5px; letter-spacing: .08em; padding: 2px 3px; } }
+@media (max-width: 360px) { .star .name { font-size: 9.5px; letter-spacing: .08em; padding: 2px 3px; } .star .dot { width: 42px; height: 42px; } .star { min-width: 0; padding: 2px; } }
 @media (min-width: 720px) { .card { padding: 54px 48px 42px; } }
