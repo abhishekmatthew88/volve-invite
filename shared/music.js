@@ -205,10 +205,145 @@
     };
   }
 
+
+  /* ---------------- shehnai (mangal vadya) ---------------- */
+  // A reed voice: buzzy sawtooth + square source, nasal formant peaks, breath noise,
+  // a scoop into each phrase, delayed vibrato, and legato meend between notes.
+  function noiseBuf(ac) {
+    if (ac.__volveNoise) return ac.__volveNoise;
+    var n = ac.sampleRate * 2, b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = rnd() * 2 - 1;
+    return (ac.__volveNoise = b);
+  }
+  function shehnaiPhrase(ac, dest, t, notes, gain) {
+    // notes: [{f, dur, glide, kan}] played as one breath
+    var total = notes.reduce(function (a, n) { return a + n.dur; }, 0);
+    var o1 = ac.createOscillator(), o2 = ac.createOscillator(), g2 = ac.createGain();
+    o1.type = "sawtooth"; o2.type = "square"; g2.gain.value = 0.45;
+    var hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 320; hp.Q.value = 0.5;
+    var sum = ac.createGain(); sum.gain.value = 1;
+    o1.connect(hp); o2.connect(g2); g2.connect(hp);
+    [[1150, 3.2, 1.0], [2350, 4.5, 0.55], [3700, 6, 0.22]].forEach(function (fm) {
+      var bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = fm[0]; bp.Q.value = fm[1];
+      var g = ac.createGain(); g.gain.value = fm[2] * 2.2; hp.connect(bp); bp.connect(g); g.connect(sum);
+    });
+    var lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700; lp.Q.value = 0.5;
+    var lg = ac.createGain(); lg.gain.value = 0.35; hp.connect(lp); lp.connect(lg); lg.connect(sum);
+    // breath
+    var nz = ac.createBufferSource(); nz.buffer = noiseBuf(ac); nz.loop = true;
+    var nbp = ac.createBiquadFilter(); nbp.type = "bandpass"; nbp.frequency.value = 1900; nbp.Q.value = 0.9;
+    var ng = ac.createGain(); ng.gain.value = 0.05; nz.connect(nbp); nbp.connect(ng); ng.connect(sum);
+    // amplitude envelope with a gentle swell and release
+    var env = ac.createGain(); sum.connect(env); env.connect(dest);
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(gain * 0.8, t + 0.12);
+    env.gain.linearRampToValueAtTime(gain, t + Math.min(1.2, total * 0.3));
+    env.gain.setValueAtTime(gain, t + total - 0.35);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + total + 0.25);
+    // vibrato (cents), arriving after the note settles
+    var lfo = ac.createOscillator(), lg2 = ac.createGain(); lfo.frequency.value = 5.4;
+    lg2.gain.setValueAtTime(0, t); lg2.gain.linearRampToValueAtTime(16, t + 0.9);
+    lfo.connect(lg2); lg2.connect(o1.detune); lg2.connect(o2.detune);
+    // scoop into the first note
+    [o1, o2].forEach(function (o) { o.detune.setValueAtTime(-80, t); o.detune.linearRampToValueAtTime(0, t + 0.16); });
+    // pitch line
+    var tt = t;
+    notes.forEach(function (n, i) {
+      [o1, o2].forEach(function (o) {
+        var fp = o.frequency;
+        if (i === 0) { fp.setValueAtTime(n.f, tt); return; }
+        if (n.kan) { fp.setValueAtTime(n.kan, tt); fp.setTargetAtTime(n.f, tt + 0.06, 0.02); }
+        else if (n.glide) { fp.setValueAtTime(notes[i - 1].f, tt); fp.linearRampToValueAtTime(n.f, tt + n.glide); }
+        else fp.setTargetAtTime(n.f, tt, 0.018);
+      });
+      if (i > 0 && !n.glide) { // a light articulation between separate notes
+        env.gain.setValueAtTime(gain, tt - 0.03); env.gain.linearRampToValueAtTime(gain * 0.72, tt); env.gain.linearRampToValueAtTime(gain, tt + 0.08);
+      }
+      tt += n.dur;
+    });
+    var end = t + total + 0.4;
+    [o1, o2, nz, lfo].forEach(function (x) { x.start(t); x.stop(end); });
+    return total;
+  }
+  // Builds one shehnai phrase from a raga scale, moving mostly by step and resting on Sa, Ga or Pa.
+  function ragaWalk(scale, lo, hi) {
+    var notes = [];
+    for (var oct = -12; oct <= 24; oct += 12) scale.forEach(function (s) { var v = s + oct; if (v >= lo && v <= hi) notes.push(v); });
+    notes.sort(function (a, b) { return a - b; });
+    var i = notes.indexOf(0);
+    return {
+      notes: notes,
+      phrase: function (len, startOn) {
+        if (startOn !== undefined && notes.indexOf(startOn) >= 0) i = notes.indexOf(startOn);
+        var out = [notes[i]];
+        for (var k = 1; k < len; k++) {
+          var mid = notes.length * 0.45, steps = i < mid ? [1, 1, 2, -1] : [-1, -1, -2, 1];
+          i = Math.max(0, Math.min(notes.length - 1, i + pick(steps)));
+          out.push(notes[i]);
+        }
+        var rest = [0, 4, 7, 12].filter(function (r) { return notes.indexOf(r) >= 0; }), last = out[out.length - 1], best = rest[0];
+        rest.forEach(function (r) { if (Math.abs(r - last) < Math.abs(best - last)) best = r; });
+        out.push(best); i = notes.indexOf(best);
+        return out;
+      },
+    };
+  }
+  // Call and response: the shehnai sings a phrase, the sitar answers with its closing notes.
+  function mangalTrack(scale, sa) {
+    var walk = ragaWalk(scale, -5, 14), turn = 0;
+    return function (ac, s, t) {
+      var len = 3 + Math.floor(rnd() * 4), semis = walk.phrase(len, turn === 0 ? 0 : undefined);
+      var notes = semis.map(function (n, k) {
+        var last = k === semis.length - 1;
+        var d = last ? pick([2.2, 2.6, 3.0]) : pick([0.55, 0.75, 0.9, 1.2, 1.6]);
+        var prev = k > 0 ? semis[k - 1] : null, glide = prev !== null && Math.abs(n - prev) <= 2 && rnd() < 0.5 ? 0.16 + rnd() * 0.2 : 0;
+        var kan = !glide && prev !== null && rnd() < 0.22 ? hz(sa * 2, n + 2) : 0;
+        return { f: hz(sa * 2, n), dur: d, glide: glide, kan: kan };
+      });
+      var dur = shehnaiPhrase(ac, s.reed, t, notes, 0.5);
+      // the sitar answers with the phrase's last two or three notes, an octave below, after a breath
+      var ans = semis.slice(-pick([2, 3])), ta = t + dur + 0.9;
+      ans.forEach(function (n, k) {
+        var f = hz(sa, n + 12) / 2 * 2; // sitar sits in the same octave as the reed's middle register
+        pluck(ac, s.sitar, ta, hz(sa * 2, n), { dur: 4, bright: 0.72, damp: 0.9985, gain: 0.42, hold: k === ans.length - 1 ? 2.4 : 0.8, release: 0.35,
+          from: k > 0 && rnd() < 0.35 ? hz(sa * 2, ans[k - 1]) : null, glide: 0.2 });
+        ta += k === ans.length - 1 ? 2.6 : pick([0.6, 0.8, 1.0]);
+      });
+      turn++;
+      return (ta - t) + 1.4 + rnd() * 1.6;
+    };
+  }
+
   /* ---------------- tracks ---------------- */
   var C_SHARP3 = 138.59, D3 = 146.83;
   var TRACKS = {
     // ---- Pooja ----
+    "pooja-shehnai-bhairav": {
+      gain: 0.45, event: "pooja", name: "Mangal shehnai · Bhairav", sub: "Shehnai and sitar in call and response over a tanpura, in Raag Bhairav, the devotional raga of dawn. The most traditional and spiritual choice.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.5, 3.8);
+        var reed = ac.createGain(); reed.gain.value = 0.55; reed.connect(b.input);
+        return { b: b, reed: reed, sitar: sitarVoice(ac, b.input, C_SHARP3), tan: tanpuraVoice(ac, b.input), mel: mangalTrack([0, 1, 4, 5, 7, 8, 11], C_SHARP3), tNext: 0, mNext: 3.2, bNext: 1.2 };
+      },
+      tick: function (ac, s, t0, t1) {
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.15);
+        while (s.mNext < t1) s.mNext += s.mel(ac, s, Math.max(s.mNext, t0));
+        while (s.bNext < t1) { bell(ac, s.b.input, Math.max(s.bNext, t0), C_SHARP3 * 4, 0.035, 6); s.bNext += 40 + rnd() * 20; }
+      },
+    },
+    "pooja-shehnai-bilawal": {
+      gain: 0.45, event: "pooja", name: "Mangal shehnai · Bilawal", sub: "The same shehnai and sitar conversation in Raag Bilawal: brighter and more celebratory, closer to the Bright beginning you chose.",
+      setup: function (ac, dest) {
+        var b = bus(ac, dest, 0.46, 3.4);
+        var reed = ac.createGain(); reed.gain.value = 0.55; reed.connect(b.input);
+        return { b: b, reed: reed, sitar: sitarVoice(ac, b.input, C_SHARP3), tan: tanpuraVoice(ac, b.input), mel: mangalTrack([0, 2, 4, 5, 7, 9, 11], C_SHARP3), tNext: 0, mNext: 3.0, bNext: 1.2 };
+      },
+      tick: function (ac, s, t0, t1) {
+        while (s.tNext < t1) s.tNext += tanpuraCycle(ac, s.tan, Math.max(s.tNext, t0), C_SHARP3, 0.15);
+        while (s.mNext < t1) s.mNext += s.mel(ac, s, Math.max(s.mNext, t0));
+        while (s.bNext < t1) { bell(ac, s.b.input, Math.max(s.bNext, t0), C_SHARP3 * 4, 0.035, 6); s.bNext += 40 + rnd() * 20; }
+      },
+    },
     "pooja-bhairav": {
       gain: 0.6, event: "pooja", name: "Morning alaap", sub: "Sitar and tanpura in the notes of Raag Bhairav, the traditional raga of dawn and devotion",
       setup: function (ac, dest) {
