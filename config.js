@@ -80,9 +80,10 @@ window.VOLVE_CONFIG = {
   // Optional background music, generated in the browser (no recordings, nothing to license).
   // It is on by default and starts with the guest's first tap (browsers block sound before that);
   // the speaker button turns it off. Set soundStartsOn: false to make it opt-in instead. Options are in shared/music.js:
-  //   pooja:   "pooja-bhairav" (morning alaap) · "pooja-bilawal" (bright beginning) · "pooja-bells" (tanpura and temple bells)
+  //   pooja:   "pooja-bansuri" (bansuri sunrise) · "pooja-pillars" · "pooja-kathak" · "pooja-sanctum" · "pooja-shehnai-bhairav" · "pooja-shehnai-bilawal"
+  //            "pooja-bhairav" (morning alaap) · "pooja-bilawal" (bright beginning) · "pooja-bells" (tanpura and temple bells)
   //   evening: "evening-rising" · "evening-constellation" · "evening-pulse" (heartbeat) · "evening-yaman" (evening raga)
   // Set sound: false to remove the sound button entirely.
-  sound: { pooja: "pooja-bilawal", evening: "evening-pulse" }, // chosen 31 Oct 2026
+  sound: { pooja: "pooja-bansuri", evening: "evening-pulse" }, // chosen 31 Oct 2026 (Pooja: Bansuri sunrise)
   soundStartsOn: true, // decided 31 Oct 2026
 };
